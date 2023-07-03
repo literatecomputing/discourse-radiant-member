@@ -1,8 +1,8 @@
 {
-  "name": "discourse-plugin-name",
+  "name": "discourse-radiant-member",
   "version": "0.0.1",
-  "repository": "TODO",
-  "author": "Discourse",
+  "repository": "https://github.com/literatecomputing/discourse-radiant-member",
+  "author": "pfaffman",
   "license": "MIT",
   "devDependencies": {
     "eslint-config-discourse": "^3.1.0"

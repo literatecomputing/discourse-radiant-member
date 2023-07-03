@@ -1,4 +1,4 @@
 plugins:
-  plugin_name_enabled:
+  radiant_member_enabled:
     default: true
     client: true

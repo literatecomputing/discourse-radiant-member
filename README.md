@@ -1,5 +1,9 @@
-# **Plugin Name** Plugin
+# **Radiant Member** Plugin
 
 **Plugin Summary**
 
-For more information, please see: **url to meta topic**
+On some to-be-determined trigger, check if a user is a member.
+
+If they are, add them to the group (that will exist in settings?)
+
+If they are not a member, see that they are not in the group.

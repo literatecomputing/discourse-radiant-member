@@ -25,7 +25,22 @@ module ::RadiantMemberModule
 end
 
 require_relative "lib/radiant_member_module/engine"
+load File.expand_path("lib/radiant/balance.rb", __dir__)
 
 after_initialize do
   # Code which should run after Rails has finished booting
-end
+  register_user_custom_field_type('radiant_dollars', :float)
+
+  add_to_class(User, "radiant_dollars") do
+    return Radiant.get_rdnt_amount(self)
+  end
+
+  add_to_serializer(:current_user, :radiant_dollars) do 
+    Radiant.get_rdnt_amount(object)
+  end
+
+  add_model_callback(User, :before_save) do
+    puts "saving user #{self.username}"
+    self.custom_fields['radiant_dollars']=Radiant.get_rdnt_amount(self)
+  end
+  end

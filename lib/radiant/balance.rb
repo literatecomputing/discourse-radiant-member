@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 module Radiant
   # TODO: get this from settings?
   @radiant_uri = "https://api.thegraph.com/subgraphs/name/radiantcapitaldevelopment/radiantcapital"

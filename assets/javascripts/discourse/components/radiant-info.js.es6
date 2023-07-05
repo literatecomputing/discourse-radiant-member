@@ -1,9 +1,13 @@
 import discourseComputed from "discourse-common/utils/decorators";
 
+function splitGroup(item) {
+  const x = item.split(":");
+  return { group: x[0], required: x[1] };
+}
 export default Ember.Component.extend({
   @discourseComputed("siteSettings.radiant_group_values")
-  groupStuff(values) {
-    window.console.log("this", values);
-    return values;
+  groupStatus(values) {
+    let required = values.split("|").map(splitGroup);
+    return required;
   },
 });

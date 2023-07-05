@@ -1,4 +1,5 @@
 Radiant Balance: {{currentUser.radiant_dollars}}
 
-b:{{banana}}
-e: {{groupStuff}}
+{{#each groupStatus as |gs|}}
+  <li>{{gs.group}}: {{gs.required}}</li>
+{{/each}}

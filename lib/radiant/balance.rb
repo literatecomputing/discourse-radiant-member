@@ -46,6 +46,7 @@ module Radiant
   def self.get_rdnt_amount(user)
     puts "getting amount for #{user.username}"
     name = "radiant_user-#{user.id}"
+    rdnt_amount = 0
     Discourse
       .cache
       .fetch(name, expires_in: SiteSetting.radiant_user_cache_minutes.minutes) do

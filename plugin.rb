@@ -17,14 +17,14 @@ load File.expand_path("lib/radiant/balance.rb", __dir__)
 
 after_initialize do
   # Code which should run after Rails has finished booting
-  register_user_custom_field_type("radiant_dollars", :float)
+  # register_user_custom_field_type("radiant_dollars", :float)
 
   add_to_class(User, "radiant_dollars") { return Radiant.get_rdnt_amount(self) }
 
   add_to_serializer(:current_user, :radiant_dollars) { Radiant.get_rdnt_amount(object) }
 
-  add_model_callback(User, :before_save) do
-    puts "saving user #{self.username}"
-    self.custom_fields["radiant_dollars"] = Radiant.get_rdnt_amount(self)
-  end
+  # add_model_callback(User, :before_save) do
+  #   puts "saving user #{self.username}"
+  #   self.custom_fields["radiant_dollars"] = Radiant.get_rdnt_amount(self)
+  # end
 end

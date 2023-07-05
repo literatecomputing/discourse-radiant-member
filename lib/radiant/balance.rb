@@ -29,12 +29,12 @@ module Radiant
               connect_timeout: 3,
             )
           parsed = JSON.parse(result.body)
-          price_of_rdnt_token = parsed["radiant-capital"]["usd"]
+          price = parsed["radiant-capital"]["usd"]
         rescue => e
           puts "problem getting dollar amount"
         end
+        price
       end
-    price_of_rdnt_token
   end
 
   def self.get_rdnt_amount_by_username(username)
@@ -67,7 +67,7 @@ module Radiant
           res = Net::HTTP.start(uri.hostname, uri.port, req_options) { |http| http.request(req) }
           puts "got something #{res}"
           parsed_body = JSON.parse(res.body)
-          puts "got #parsed_body"
+          puts "got parsed_body: #{parsed_body}"
 
           locked_balance = parsed_body["data"]["lockeds"][0]["lockedBalance"].to_i
           lp_token_price = parsed_body["data"]["lpTokenPrice"]["price"].to_i

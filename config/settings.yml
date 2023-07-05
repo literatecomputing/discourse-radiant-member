@@ -3,7 +3,7 @@ plugins:
     default: true
     client: true
   radiant_group_values:
-    default: "2500:2500|daomember:1"
+    default: "rfp-author:1|rfp-commenter:2500"
     client: true
   radiant_user_cache_minutes:
     default: 1440

@@ -44,7 +44,7 @@ module Radiant
   end
 
   def self.get_rdnt_amount(user)
-    puts "getting amount for #{user.username}"
+    puts "now getting amount for #{user.username}"
     name = "radiant_user-#{user.id}"
     rdnt_amount = 0
     Discourse
@@ -98,7 +98,8 @@ module Radiant
               group.remove(user)
             end
           end
-        rdnt_amount
+        puts "now returning #{rdnt_amount} for #{user.username}"
+        rdnt_amount.to_d.round(2, :truncate).to_f
       end
   end
 end

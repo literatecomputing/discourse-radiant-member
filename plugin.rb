@@ -8,8 +8,6 @@
 # required_version: 2.7.0
 
 enabled_site_setting :radiant_member_enabled
-
-require "eth"
 module ::RadiantMemberModule
   PLUGIN_NAME = "discourse-radiant-member"
 end

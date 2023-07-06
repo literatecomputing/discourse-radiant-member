@@ -77,50 +77,44 @@ module Radiant
 
   # New method for fetching RDNT amount from a specific chain
   def self.get_rdnt_amount_from_chain(user, radiant_uri, multiplier)
-    name = "radiant_user-#{user.id}"
     rdnt_amount = 0
-    Discourse
-      .cache
-      .fetch(name, expires_in: SiteSetting.radiant_user_cache_minutes.minutes) do
-        begin
-          puts "getting address"
-          address = get_siwe_address_by_user(user)
-          uri = URI(radiant_uri)
-          req = Net::HTTP::Post.new(uri)
-          req.content_type = "application/json"
-          req.body = {
-            "query" =>
-              'query Lock($address: String!) { lockeds(id: $address, where: {user_: {id: $address}}, orderBy: timestamp, orderDirection: desc, first: 1) { lockedBalance timestamp } lpTokenPrice(id: "1") { price } }',
-            "variables" => {
-              "address" => address,
-            },
-          }.to_json
-          req_options = { use_ssl: uri.scheme == "https" }
-          puts "getting #{req} from #{radiant_uri} with #{address}"
-          res = Net::HTTP.start(uri.hostname, uri.port, req_options) { |http| http.request(req) }
-          puts "got something #{res}"
-          parsed_body = JSON.parse(res.body)
-          puts "got parsed_body: #{parsed_body}"
-
+    Discourse.cache.fetch("radiant_user-#{user.id}", expires_in: SiteSetting.radiant_user_cache_minutes.minutes) do
+      begin
+        address = get_siwe_address_by_user(user)
+        uri = URI(radiant_uri)
+        req = Net::HTTP::Post.new(uri)
+        req.content_type = "application/json"
+        req.body = {
+          query: 'query Lock($address: String!) { lockeds(id: $address, where: {user_: {id: $address}}, orderBy: timestamp, orderDirection: desc, first: 1) { lockedBalance timestamp } lpTokenPrice(id: "1") { price } }',
+          variables: {
+            address: address
+          }
+        }.to_json
+  
+        req_options = { use_ssl: uri.scheme == "https" }
+        res = Net::HTTP.start(uri.hostname, uri.port, req_options) { |http| http.request(req) }
+        parsed_body = JSON.parse(res.body)
+  
+        if parsed_body["data"]["lockeds"].any?
           locked_balance = parsed_body["data"]["lockeds"][0]["lockedBalance"].to_i
           lp_token_price = parsed_body["data"]["lpTokenPrice"]["price"].to_i
-
-          # Determine the divisor for lp_token_price based on the number of digits
+  
           number_of_digits = lp_token_price.digits.count
           price_divisor = number_of_digits > 9 ? 1e9 : 1e8
           lp_token_price_in_usd = lp_token_price / price_divisor
-          
+  
           locked_balance_formatted = locked_balance / 1e18
           locked_balance_in_usd = locked_balance_formatted * lp_token_price_in_usd
-           
-          # Modified calculation to use the multiplier
+  
           rdnt_amount = (locked_balance_in_usd * multiplier) / price_of_rdnt_token
-          puts "got #{rdnt_amount}"
-        rescue => e
-          puts "something went wrong getting rdnt amount #{e}"
-          0
+        else
+          puts "No locked balances found for #{user.username} on #{radiant_uri}"
         end
+      rescue StandardError => e
+        puts "Something went wrong getting RDNT amount #{e}"
+        0
       end
+    end
     rdnt_amount
   end
 end

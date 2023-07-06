@@ -46,45 +46,38 @@ module Radiant
 
   def self.get_rdnt_amount(user)
     puts "now getting amount for #{user.username}"
-    name = "radiant_user-#{user.id}"
+    
+    # Get amounts from both chains with the appropriate multipliers
+    rdnt_amount_arbitrum = get_rdnt_amount_from_chain(user, @radiant_uri_arbitrum, 0.8)
+    rdnt_amount_bsc = get_rdnt_amount_from_chain(user, @radiant_uri_bsc, 0.5)
   
-    # Move caching here, around the entire calculation
-    rdnt_amount = Discourse.cache.fetch(name, expires_in: SiteSetting.radiant_user_cache_minutes.minutes) do
-      # Get amounts from both chains with the appropriate multipliers
-      rdnt_amount_arbitrum = get_rdnt_amount_from_chain(user, @radiant_uri_arbitrum, 0.8)
-      rdnt_amount_bsc = get_rdnt_amount_from_chain(user, @radiant_uri_bsc, 0.5)
+    # Log the amounts fetched from each chain
+    puts "rdnt_amount_arbitrum: #{rdnt_amount_arbitrum}"
+    puts "rdnt_amount_bsc: #{rdnt_amount_bsc}"
   
-      # Log the amounts fetched from each chain
-      puts "rdnt_amount_arbitrum: #{rdnt_amount_arbitrum}"
-      puts "rdnt_amount_bsc: #{rdnt_amount_bsc}"
+    # Sum amounts from both chains
+    total_rdnt_amount = rdnt_amount_arbitrum + rdnt_amount_bsc
   
-      # Sum amounts from both chains
-      total_rdnt_amount = rdnt_amount_arbitrum + rdnt_amount_bsc
-  
-      # Update groups
-      SiteSetting.radiant_group_values.split("|").each do |g|
-        group_name, required_amount = g.split(":")
-        group = Group.find_by_name(group_name)
-        next unless group
-        puts "Processing group #{group.name}"
-        if total_rdnt_amount > required_amount.to_i
-          puts "adding #{user.username} to #{group.name}"
-          group.add(user)
-        else
-          puts "removing #{user.username} from #{group.name}"
-          group.remove(user)
-        end
+    # Update groups
+    SiteSetting.radiant_group_values.split("|").each do |g|
+      group_name, required_amount = g.split(":")
+      group = Group.find_by_name(group_name)
+      next unless group
+      puts "Processing group #{group.name}"
+      if total_rdnt_amount > required_amount.to_i
+        puts "adding #{user.username} to #{group.name}"
+        group.add(user)
+      else
+        puts "removing #{user.username} from #{group.name}"
+        group.remove(user)
       end
-  
-      # Log the final total RDNT amount
-      puts "now returning #{total_rdnt_amount} for #{user.username}"
-      total_rdnt_amount.to_d.round(2, :truncate).to_f
     end
   
-    rdnt_amount
+    # Log the final total RDNT amount
+    puts "now returning #{total_rdnt_amount} for #{user.username}"
+    total_rdnt_amount.to_d.round(2, :truncate).to_f
   end
   
-
   # New method for fetching RDNT amount from a specific chain
   def self.get_rdnt_amount_from_chain(user, radiant_uri, multiplier)
     begin

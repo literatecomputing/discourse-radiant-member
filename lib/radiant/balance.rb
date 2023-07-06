@@ -71,7 +71,8 @@ module Radiant
           group.remove(user)
         end
       end
-    total_rdnt_amount
+      puts "now returning #{total_rdnt_amount} for #{user.username}"
+      total_rdnt_amount.to_d.round(2, :truncate).to_f
   end
 
   # New method for fetching RDNT amount from a specific chain

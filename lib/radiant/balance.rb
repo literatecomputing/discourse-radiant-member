@@ -51,6 +51,10 @@ module Radiant
     rdnt_amount_arbitrum = get_rdnt_amount_from_chain(user, @radiant_uri_arbitrum, 0.8)
     rdnt_amount_bsc = get_rdnt_amount_from_chain(user, @radiant_uri_bsc, 0.5)
 
+    # Log the amounts fetched from each chain
+    puts "rdnt_amount_arbitrum: #{rdnt_amount_arbitrum}"
+    puts "rdnt_amount_bsc: #{rdnt_amount_bsc}"
+
     # Sum amounts from both chains
     total_rdnt_amount = rdnt_amount_arbitrum + rdnt_amount_bsc
 
@@ -71,6 +75,7 @@ module Radiant
           group.remove(user)
         end
       end
+      # Log the final total RDNT amount
       puts "now returning #{total_rdnt_amount} for #{user.username}"
       total_rdnt_amount.to_d.round(2, :truncate).to_f
   end

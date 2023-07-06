@@ -45,24 +45,24 @@ module Radiant
   end
 
   def self.get_rdnt_amount(user)
-    puts "getting amount for #{user.username}"
-
-    # Get amounts from both chains with the appropriate multipliers
-    rdnt_amount_arbitrum = get_rdnt_amount_from_chain(user, @radiant_uri_arbitrum, 0.8)
-    rdnt_amount_bsc = get_rdnt_amount_from_chain(user, @radiant_uri_bsc, 0.5)
-
-    # Log the amounts fetched from each chain
-    puts "rdnt_amount_arbitrum: #{rdnt_amount_arbitrum}"
-    puts "rdnt_amount_bsc: #{rdnt_amount_bsc}"
-
-    # Sum amounts from both chains
-    total_rdnt_amount = rdnt_amount_arbitrum + rdnt_amount_bsc
-
-    # Update groups
-    SiteSetting
-      .radiant_group_values
-      .split("|")
-      .each do |g|
+    puts "now getting amount for #{user.username}"
+    name = "radiant_user-#{user.id}"
+  
+    # Move caching here, around the entire calculation
+    rdnt_amount = Discourse.cache.fetch(name, expires_in: SiteSetting.radiant_user_cache_minutes.minutes) do
+      # Get amounts from both chains with the appropriate multipliers
+      rdnt_amount_arbitrum = get_rdnt_amount_from_chain(user, @radiant_uri_arbitrum, 0.8)
+      rdnt_amount_bsc = get_rdnt_amount_from_chain(user, @radiant_uri_bsc, 0.5)
+  
+      # Log the amounts fetched from each chain
+      puts "rdnt_amount_arbitrum: #{rdnt_amount_arbitrum}"
+      puts "rdnt_amount_bsc: #{rdnt_amount_bsc}"
+  
+      # Sum amounts from both chains
+      total_rdnt_amount = rdnt_amount_arbitrum + rdnt_amount_bsc
+  
+      # Update groups
+      SiteSetting.radiant_group_values.split("|").each do |g|
         group_name, required_amount = g.split(":")
         group = Group.find_by_name(group_name)
         next unless group
@@ -75,52 +75,48 @@ module Radiant
           group.remove(user)
         end
       end
+  
       # Log the final total RDNT amount
       puts "now returning #{total_rdnt_amount} for #{user.username}"
       total_rdnt_amount.to_d.round(2, :truncate).to_f
+    end
+  
+    rdnt_amount
   end
+  
 
   # New method for fetching RDNT amount from a specific chain
   def self.get_rdnt_amount_from_chain(user, radiant_uri, multiplier)
-    rdnt_amount = 0
-    Discourse.cache.fetch("radiant_user-#{user.id}", expires_in: SiteSetting.radiant_user_cache_minutes.minutes) do
-      begin
-        address = get_siwe_address_by_user(user)
-        uri = URI(radiant_uri)
-        req = Net::HTTP::Post.new(uri)
-        req.content_type = "application/json"
-        req.body = {
-          query: 'query Lock($address: String!) { lockeds(id: $address, where: {user_: {id: $address}}, orderBy: timestamp, orderDirection: desc, first: 1) { lockedBalance timestamp } lpTokenPrice(id: "1") { price } }',
-          variables: {
-            address: address
-          }
-        }.to_json
+    begin
+      puts "getting address"
+      address = get_siwe_address_by_user(user)
+      uri = URI(radiant_uri)
+      req = Net::HTTP::Post.new(uri)
+      req.content_type = "application/json"
+      req.body = {
+        "query" =>
+          'query Lock($address: String!) { lockeds(id: $address, where: {user_: {id: $address}}, orderBy: timestamp, orderDirection: desc, first: 1) { lockedBalance timestamp } lpTokenPrice(id: "1") { price } }',
+        "variables" => {
+          "address" => address,
+        },
+      }.to_json
+      req_options = { use_ssl: uri.scheme == "https" }
+      puts "getting #{req} from #{radiant_uri} with #{address}"
+      res = Net::HTTP.start(uri.hostname, uri.port, req_options) { |http| http.request(req) }
+      puts "got something #{res}"
+      parsed_body = JSON.parse(res.body)
+      puts "got parsed_body: #{parsed_body}"
   
-        req_options = { use_ssl: uri.scheme == "https" }
-        res = Net::HTTP.start(uri.hostname, uri.port, req_options) { |http| http.request(req) }
-        parsed_body = JSON.parse(res.body)
-  
-        if parsed_body["data"]["lockeds"].any?
-          locked_balance = parsed_body["data"]["lockeds"][0]["lockedBalance"].to_i
-          lp_token_price = parsed_body["data"]["lpTokenPrice"]["price"].to_i
-  
-          number_of_digits = lp_token_price.digits.count
-          price_divisor = number_of_digits > 9 ? 1e9 : 1e8
-          lp_token_price_in_usd = lp_token_price / price_divisor
-  
-          locked_balance_formatted = locked_balance / 1e18
-          locked_balance_in_usd = locked_balance_formatted * lp_token_price_in_usd
-  
-          rdnt_amount = (locked_balance_in_usd * multiplier) / price_of_rdnt_token
-        else
-          puts "No locked balances found for #{user.username} on #{radiant_uri}"
-        end
-      rescue StandardError => e
-        puts "Something went wrong getting RDNT amount #{e}"
-        0
-      end
+      locked_balance = parsed_body["data"]["lockeds"][0]["lockedBalance"].to_i
+      lp_token_price = parsed_body["data"]["lpTokenPrice"]["price"].to_i
+      lp_token_price_in_usd = lp_token_price / 1e8
+      locked_balance_formatted = locked_balance / 1e18
+      locked_balance_in_usd = locked_balance_formatted * lp_token_price_in_usd
+      rdnt_amount = (locked_balance_in_usd * multiplier) / price_of_rdnt_token
+      puts "got #{rdnt_amount}"
+    rescue => e
+      puts "something went wrong getting rdnt amount #{e}"
+      return 0
     end
-    rdnt_amount
+    rdnt_amount.to_d.round(2, :truncate).to_f
   end
-end
-

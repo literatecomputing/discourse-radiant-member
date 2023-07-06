@@ -103,10 +103,15 @@ module Radiant
 
           locked_balance = parsed_body["data"]["lockeds"][0]["lockedBalance"].to_i
           lp_token_price = parsed_body["data"]["lpTokenPrice"]["price"].to_i
-          lp_token_price_in_usd = lp_token_price / 1e8
+
+          # Determine the divisor for lp_token_price based on the number of digits
+          number_of_digits = lp_token_price.digits.count
+          price_divisor = number_of_digits > 9 ? 1e9 : 1e8
+          lp_token_price_in_usd = lp_token_price / price_divisor
+          
           locked_balance_formatted = locked_balance / 1e18
           locked_balance_in_usd = locked_balance_formatted * lp_token_price_in_usd
-
+           
           # Modified calculation to use the multiplier
           rdnt_amount = (locked_balance_in_usd * multiplier) / price_of_rdnt_token
           puts "got #{rdnt_amount}"

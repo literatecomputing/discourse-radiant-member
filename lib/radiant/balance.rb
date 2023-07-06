@@ -120,3 +120,4 @@ module Radiant
     end
     rdnt_amount.to_d.round(2, :truncate).to_f
   end
+end

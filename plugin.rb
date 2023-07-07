@@ -20,6 +20,8 @@ after_initialize do
   # register_user_custom_field_type("radiant_dollars", :float)
 
   add_to_class(User, "radiant_dollars") { return Radiant.get_rdnt_amount(self) }
+  
+  add_to_class(User, "siweAddress") { return Radiant.get_siwe_address_by_user(self) }
 
   add_to_serializer(:current_user, :radiant_dollars) { Radiant.get_rdnt_amount(object) }
 

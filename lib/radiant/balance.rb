@@ -46,17 +46,26 @@ module Radiant
 
   def self.get_rdnt_amount(user)
     puts "now getting amount for #{user.username}"
-    
-    # Get amounts from both chains with the appropriate multipliers
-    rdnt_amount_arbitrum = get_rdnt_amount_from_chain(user, @radiant_uri_arbitrum, 0.8)
-    rdnt_amount_bsc = get_rdnt_amount_from_chain(user, @radiant_uri_bsc, 0.5)
   
-    # Log the amounts fetched from each chain
-    puts "rdnt_amount_arbitrum: #{rdnt_amount_arbitrum}"
-    puts "rdnt_amount_bsc: #{rdnt_amount_bsc}"
+    # Define cache key for the total RDNT amount
+    name_total = "radiant_user_total-#{user.id}"
   
-    # Sum amounts from both chains
-    total_rdnt_amount = rdnt_amount_arbitrum + rdnt_amount_bsc
+    # Cache the total RDNT amount
+    total_rdnt_amount = Discourse.cache.fetch(name_total, expires_in: SiteSetting.radiant_user_cache_minutes.minutes) do
+      # Get amounts from both chains with the appropriate multipliers
+      rdnt_amount_arbitrum = get_rdnt_amount_from_chain(user, @radiant_uri_arbitrum, 0.8)
+      rdnt_amount_bsc = get_rdnt_amount_from_chain(user, @radiant_uri_bsc, 0.5)
+
+      # Log the amounts fetched from each chain
+      puts "rdnt_amount_arbitrum: #{rdnt_amount_arbitrum}"
+      puts "rdnt_amount_bsc: #{rdnt_amount_bsc}"
+
+      # Sum amounts from both chains
+      rdnt_amount_arbitrum + rdnt_amount_bsc
+    end
+  
+    # Log the total RDNT amount fetched
+    puts "total_rdnt_amount fetched from cache for user ID #{user.id} is: #{total_rdnt_amount}"
   
     # Update groups
     SiteSetting.radiant_group_values.split("|").each do |g|

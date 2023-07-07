@@ -54,7 +54,7 @@ module Radiant
     cached_value = Discourse.cache.read(name_total)
 
     # Check if it's the first time (no cache data) or cache has expired
-    if cached_value.nil?
+    if cached_value.nil? || cached_value == 0
       puts "No cached data, fetching fresh data for #{user.username}"
       total_rdnt_amount = fetch_and_cache_rdnt_amount(user, name_total)
     else
@@ -105,6 +105,10 @@ module Radiant
     begin
       puts "getting address"
       address = get_siwe_address_by_user(user)
+      if address.nil?
+        puts "User has not connected their wallet."
+        return 0
+      end
       uri = URI(radiant_uri)
       req = Net::HTTP::Post.new(uri)
       req.content_type = "application/json"

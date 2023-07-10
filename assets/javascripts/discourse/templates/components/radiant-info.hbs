@@ -1,4 +1,9 @@
-Radiant Balance: {{currentUser.radiant_dollars}}
+<div class="radiant-balance">
+  Radiant Balance: {{currentUser.radiant_dollars}}
+</div>
+<div class="wallet-address">
+  Wallet: {{currentUser.siweAddress}}
+</div>
 
 {{#each groupStatus as |gs|}}
   <li>

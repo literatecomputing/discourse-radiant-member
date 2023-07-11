@@ -14,7 +14,6 @@ module Radiant
     siwe = user.associated_accounts.filter { |a| a[:name] == "siwe" }.first
     return nil unless siwe
     address = siwe[:description].downcase
-    puts "Got #{address} for #{user.username}"
     address
   end
 
@@ -32,7 +31,7 @@ module Radiant
           parsed = JSON.parse(result.body)
           price = parsed["radiant-capital"]["usd"]
         rescue => e
-          puts "problem getting dollar amount"
+          Rails.logger.error("problem getting dollar amount: #{e.class}")
         end
         price
       end
@@ -45,8 +44,6 @@ module Radiant
   end
 
   def self.get_rdnt_amount(user)
-    puts "now getting amount for #{user.username}"
-  
     # Define cache key for the total RDNT amount
     name_total = "radiant_user_total-#{user.id}"
 
@@ -55,11 +52,9 @@ module Radiant
 
     # Check if it's the first time (no cache data) or cache has expired
     if cached_value.nil? || cached_value == 0
-      puts "No cached data, fetching fresh data for #{user.username}"
       total_rdnt_amount = fetch_and_cache_rdnt_amount(user, name_total)
     else
       # Use the cached value
-      puts "Using cached data for #{user.username}"
       total_rdnt_amount = cached_value
     end
 
@@ -68,18 +63,14 @@ module Radiant
       group_name, required_amount = g.split(":")
       group = Group.find_by_name(group_name)
       next unless group
-      puts "Processing group #{group.name}"
       if total_rdnt_amount > required_amount.to_i
-        puts "adding #{user.username} to #{group.name}"
         group.add(user)
       else
-        puts "removing #{user.username} from #{group.name}"
         group.remove(user)
       end
     end
   
     # Log the final total RDNT amount
-    puts "now returning #{total_rdnt_amount} for #{user.username}"
     total_rdnt_amount.to_d.round(2, :truncate).to_f
   end
 
@@ -89,8 +80,8 @@ module Radiant
     rdnt_amount_bsc = get_rdnt_amount_from_chain(user, @radiant_uri_bsc, 0.5)
 
     # Log the amounts fetched from each chain
-    puts "rdnt_amount_arbitrum: #{rdnt_amount_arbitrum}"
-    puts "rdnt_amount_bsc: #{rdnt_amount_bsc}"
+    # Rails.logger.warn ("rdnt_amount_arbitrum: #{rdnt_amount_arbitrum}")
+    # Rails.logger.warn ("rdnt_amount_bsc: #{rdnt_amount_bsc}")
 
     # Sum amounts from both chains
     total_rdnt_amount = rdnt_amount_arbitrum + rdnt_amount_bsc
@@ -103,10 +94,9 @@ module Radiant
     
   def self.get_rdnt_amount_from_chain(user, radiant_uri, multiplier)
     begin
-      puts "getting address"
       address = get_siwe_address_by_user(user)
       if address.nil?
-        puts "User has not connected their wallet."
+        Rails.logger.warn ("User #{user.username} has not connected their wallet.")
         return 0
       end
       uri = URI(radiant_uri)
@@ -120,11 +110,8 @@ module Radiant
         },
       }.to_json
       req_options = { use_ssl: uri.scheme == "https" }
-      puts "getting #{req} from #{radiant_uri} with #{address}"
       res = Net::HTTP.start(uri.hostname, uri.port, req_options) { |http| http.request(req) }
-      puts "got something #{res}"
       parsed_body = JSON.parse(res.body)
-      puts "got parsed_body: #{parsed_body}"
   
       locked_balance = parsed_body["data"]["lockeds"][0]["lockedBalance"].to_i
       lp_token_price = parsed_body["data"]["lpTokenPrice"]["price"].to_i
@@ -132,9 +119,8 @@ module Radiant
       locked_balance_formatted = locked_balance / 1e18
       locked_balance_in_usd = locked_balance_formatted * lp_token_price_in_usd
       rdnt_amount = (locked_balance_in_usd * multiplier) / price_of_rdnt_token
-      puts "got #{rdnt_amount}"
     rescue => e
-      puts "something went wrong getting rdnt amount #{e}"
+      Rails.logger.error ("something went wrong getting rdnt amount #{e}")
       return 0
     end
     rdnt_amount.to_d.round(2, :truncate).to_f

@@ -1,7 +1,8 @@
 # frozen_string_literal: true
 module Radiant
   # URIs for different chains
-  @radiant_uri_arbitrum = "https://api.thegraph.com/subgraphs/name/radiantcapitaldevelopment/radiantcapital"
+  @radiant_uri_arbitrum =
+    "https://api.thegraph.com/subgraphs/name/radiantcapitaldevelopment/radiantcapital"
   @radiant_uri_bsc = "https://api.thegraph.com/subgraphs/name/radiantcapitaldevelopment/radiant-bsc"
 
   def self.get_siwe_address_by_username(username)
@@ -59,17 +60,20 @@ module Radiant
     end
 
     # Update groups
-    SiteSetting.radiant_group_values.split("|").each do |g|
-      group_name, required_amount = g.split(":")
-      group = Group.find_by_name(group_name)
-      next unless group
-      if total_rdnt_amount > required_amount.to_i
-        group.add(user)
-      else
-        group.remove(user)
+    SiteSetting
+      .radiant_group_values
+      .split("|")
+      .each do |g|
+        group_name, required_amount = g.split(":")
+        group = Group.find_by_name(group_name)
+        next unless group
+        if total_rdnt_amount > required_amount.to_i
+          group.add(user)
+        else
+          group.remove(user)
+        end
       end
-    end
-  
+
     # Log the final total RDNT amount
     total_rdnt_amount.to_d.round(2, :truncate).to_f
   end
@@ -87,11 +91,15 @@ module Radiant
     total_rdnt_amount = rdnt_amount_arbitrum + rdnt_amount_bsc
 
     # Cache the total RDNT amount
-    Discourse.cache.write(cache_key, total_rdnt_amount, expires_in: SiteSetting.radiant_user_cache_minutes.minutes)
+    Discourse.cache.write(
+      cache_key,
+      total_rdnt_amount,
+      expires_in: SiteSetting.radiant_user_cache_minutes.minutes,
+    )
 
     total_rdnt_amount
   end
-    
+
   def self.get_rdnt_amount_from_chain(user, radiant_uri, multiplier)
     begin
       address = get_siwe_address_by_user(user)
@@ -112,7 +120,7 @@ module Radiant
       req_options = { use_ssl: uri.scheme == "https" }
       res = Net::HTTP.start(uri.hostname, uri.port, req_options) { |http| http.request(req) }
       parsed_body = JSON.parse(res.body)
-  
+
       locked_balance = parsed_body["data"]["lockeds"][0]["lockedBalance"].to_i
       lp_token_price = parsed_body["data"]["lpTokenPrice"]["price"].to_i
       lp_token_price_in_usd = lp_token_price / 1e8

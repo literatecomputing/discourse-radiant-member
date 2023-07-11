@@ -26,7 +26,6 @@ after_initialize do
   add_to_serializer(:current_user, :radiant_dollars) { Radiant.get_rdnt_amount(object) }
   add_to_serializer(:current_user, :siweAddress) {  Radiant.get_siwe_address_by_user(object) }
 
-
   # add_model_callback(User, :before_save) do
   #   puts "saving user #{self.username}"
   #   self.custom_fields["radiant_dollars"] = Radiant.get_rdnt_amount(self)
